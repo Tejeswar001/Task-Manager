@@ -32,84 +32,120 @@ export default function Home() {
 
   // Load tasks from localStorage on initial render
   useEffect(() => {
-    if (!user) return; // Don't load tasks if not authenticated
+    if (!user) return;
 
-    const savedTasks = localStorage.getItem(`tasks-${user.id}`);
-    if (savedTasks) {
-      setTasks(JSON.parse(savedTasks));
-    } else {
-      // Sample tasks for demo
-      const demoTasks: Task[] = [
-        {
-          id: "1",
-          title: "Complete project proposal",
-          completed: false,
-          deadline: new Date(Date.now() + 86400000 * 2)
-            .toISOString()
-            .split("T")[0], // 2 days from now
-          priority: "high",
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: "2",
-          title: "Schedule team meeting",
-          completed: true,
-          deadline: new Date().toISOString().split("T")[0],
-          priority: "medium",
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: "3",
-          title: "Research new technologies",
-          completed: false,
-          deadline: new Date(Date.now() + 86400000 * 5)
-            .toISOString()
-            .split("T")[0], // 5 days from now
-          priority: "low",
-          createdAt: new Date().toISOString(),
-        },
-      ];
-      setTasks(demoTasks);
-      if (user) {
-        localStorage.setItem(`tasks-${user.id}`, JSON.stringify(demoTasks));
+    const fetchTasks = async () => {
+      try {
+        const res = await fetch("/api/tasks");
+        const data = await res.json();
+        if (res.ok) {
+          setTasks(data.tasks);
+        } else {
+          console.error("Error fetching tasks:", data.error);
+        }
+      } catch (err) {
+        console.error("Failed to load tasks:", err);
       }
-    }
+    };
+
+    fetchTasks();
   }, [user]);
 
-  // Save tasks to localStorage whenever they change
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem(`tasks-${user.id}`, JSON.stringify(tasks));
+  const addTask = async (
+    task: Omit<Task, "id" | "createdAt" | "completed">
+  ) => {
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(task),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        const newTask: Task = {
+          ...task,
+          id: data.taskId,
+          completed: false,
+          createdAt: new Date().toISOString(),
+        };
+        setTasks((prev) => [...prev, newTask]);
+        setIsAddTaskOpen(false);
+      } else {
+        console.error("Failed to add task:", data.error);
+      }
+    } catch (err) {
+      console.error("Add task error:", err);
     }
-  }, [tasks, user]);
-
-  const addTask = (task: Omit<Task, "id" | "createdAt">) => {
-    const newTask: Task = {
-      ...task,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-    };
-    setTasks([...tasks, newTask]);
-    setIsAddTaskOpen(false);
   };
 
-  const updateTask = (updatedTask: Task) => {
-    setTasks(
-      tasks.map((task) => (task.id === updatedTask.id ? updatedTask : task))
-    );
-    setEditingTask(null);
+  const updateTask = async (updatedTask: Task) => {
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedTask),
+      });
+
+      if (!res.ok) throw new Error("Failed to update task");
+
+      const data = await res.json();
+      if (data.success) {
+        setTasks((prev) =>
+          prev.map((task) => (task.id === updatedTask.id ? updatedTask : task))
+        );
+        setEditingTask(null);
+      }
+    } catch (err) {
+      console.error("Update task error:", err);
+    }
   };
 
-  const deleteTask = (id: string) => {
-    setTasks(tasks.filter((task) => task.id !== id));
+  const deleteTask = async (id: string) => {
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+
+      if (!res.ok) throw new Error("Failed to delete task");
+
+      const data = await res.json();
+      if (data.success) {
+        setTasks((prev) => prev.filter((task) => task.id !== id));
+      }
+    } catch (err) {
+      console.error("Delete task error:", err);
+    }
   };
 
-  const toggleTaskCompletion = (id: string) => {
-    setTasks(
-      tasks.map((task) =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
-    );
+  const toggleTaskCompletion = async (id: string) => {
+    const taskToUpdate = tasks.find((task) => task.id === id);
+    if (!taskToUpdate) return;
+
+    const updatedTask = { ...taskToUpdate, completed: !taskToUpdate.completed };
+
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedTask),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setTasks((prev) =>
+          prev.map((task) => (task.id === id ? updatedTask : task))
+        );
+      } else {
+        console.error("Update failed", data.error);
+      }
+    } catch (err) {
+      console.error("Error updating task:", err);
+    }
   };
 
   const filteredTasks = tasks.filter((task) => {

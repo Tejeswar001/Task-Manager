@@ -13,7 +13,7 @@ export interface User {
 export async function createUser(userData: Omit<User, "_id" | "createdAt">): Promise<User | null> {
   try {
     const client = await clientPromise
-    const db = client.db()
+    const db = client.db("smart-todo")
 
     // Check if user already exists
     const existingUser = await db.collection("users").findOne({ email: userData.email })
