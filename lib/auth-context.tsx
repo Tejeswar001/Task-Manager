@@ -76,7 +76,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         credentials: "include",
       });
 
-      const data = await res.json();
+      let data = null;
+      const contentType = res.headers.get("content-type");
+
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        console.error("Non-JSON response:", text);
+        return { success: false, error: "Unexpected response from server" };
+      }
 
       if (!res.ok) {
         return { success: false, error: data.error || "Failed to sign in" };
@@ -87,35 +96,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: true };
     } catch (error) {
       console.error("Sign in error", error);
-      return { success: false, error: "An unexpected error occurred" };
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function signUp(name: string, email: string, password: string) {
-    if (!name || !email || !password) {
-      return { success: false, error: "All fields are required" };
-    }
-
-    try {
-      setLoading(true);
-      const res = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
-        credentials: "include",
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        return { success: false, error: data.error || "Failed to sign up" };
-      }
-
-      return await signIn(email, password);
-    } catch (error) {
-      console.error("Sign up error", error);
       return { success: false, error: "An unexpected error occurred" };
     } finally {
       setLoading(false);
