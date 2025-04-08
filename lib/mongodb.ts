@@ -5,7 +5,7 @@ if (!process.env.MONGO_URI) {
 }
 
 const uri = process.env.MONGO_URI
-const options = {}
+const options = {} 
 
 let client
 let clientPromise: Promise<MongoClient>
