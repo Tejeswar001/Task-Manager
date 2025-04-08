@@ -102,6 +102,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function signUp(name: string, email: string, password: string) {
+    if (!name || !email || !password) {
+      return { success: false, error: "All fields are required" };
+    }
+
+    try {
+      setLoading(true);
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+        credentials: "include",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        return { success: false, error: data.error || "Failed to sign up" };
+      }
+
+      return await signIn(email, password);
+    } catch (error) {
+      console.error("Sign up error", error);
+      return { success: false, error: "An unexpected error occurred" };
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function signOut() {
     try {
       setLoading(true);
