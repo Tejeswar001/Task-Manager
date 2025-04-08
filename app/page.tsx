@@ -224,7 +224,7 @@ export default function Home() {
 
               <Button variant="outline" size="icon" asChild>
                 <a
-                  href="https://github.com/yourusername/smart-todo-list"
+                  href="https://github.com/Tejeswar001/Task-Manager"
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="View source code on GitHub"
